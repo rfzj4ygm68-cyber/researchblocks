@@ -1,5 +1,7 @@
 # ResearchBlocks · local alpha
 
+Development branch: the separate paid HTTP service and agent client are implemented under [hosted/](hosted/README.md). They are awaiting hosting capacity, secure provider connections and live verification; checkout is not active. The existing 0.1.0 release assets and installed skill remain the earlier local alpha.
+
 Fill a comparison table without losing the evidence behind each cell.
 
 ResearchBlocks is a small, local-first Python package for agent workflows. It stores bounded comparison jobs, returns structured evidence blocks and exports readable tables. Use your existing agent's research tools and import the findings free, or explicitly enable a caller-funded Parallel adapter. No hosted service, wallet connection, subscription, or automatic payment is included in this alpha.
@@ -88,6 +90,8 @@ A structurally valid source citation is **not proof that a claim is true**. The 
 Jobs live in a private local SQLite file, defaulting to `~/.local/share/researchblocks/jobs.sqlite3`. Override with `--db` or `RESEARCHBLOCKS_DB`. This file can contain your research prompts and evidence. Protect and delete it under your own retention policy. No usage telemetry, shared evidence cache or remote analytics is included.
 
 The paid adapter sends only the comparison request to Parallel over HTTPS. API keys stay in process memory/environment. It uses a fixed API origin, refuses redirects and does not automatically retry creation. An uncertain submission is retained as `submission_unknown` for account reconciliation; it is not silently charged again. Polling and result retrieval do not submit another task.
+
+Malformed completed provider output is retained as `result_invalid`, with no usable evidence block. Repeating status or result calls does not fetch that rejected output again or submit another job; reconcile the existing provider run instead. Transient transport failures remain retryable. Concurrent polls cannot replace a completed or failed state with an older response.
 
 This local process is single-owner software. It has no multi-user authentication, quotas, hosted payment settlement, customer isolation or public-service abuse controls. Do not expose it as a public HTTP service.
 

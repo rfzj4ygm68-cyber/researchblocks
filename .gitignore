@@ -6,3 +6,10 @@ build/
 dist/
 .venv/
 .env
+node_modules/
+.env
+.env.*
+!*.env.example
+*.sqlite
+*.sqlite-*
+*.receipt.json
