@@ -1,0 +1,12 @@
+{
+  "candidates": [
+    {"id": "parallel", "label": "Parallel Task API", "official_domains": ["docs.parallel.ai"]},
+    {"id": "serper", "label": "Serper Search API", "official_domains": ["serper.dev"]}
+  ],
+  "criteria": [
+    {"id": "unit_price", "question": "What is the published entry or core tier unit price, with billing basis preserved?"},
+    {"id": "guaranteed_latency", "question": "Is an exact guaranteed end-to-end latency published on the inspected pricing page?"}
+  ],
+  "max_age_hours": 24,
+  "max_cost_usd": "0.025"
+}
