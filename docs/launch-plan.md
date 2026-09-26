@@ -1,3 +1,9 @@
+# Hosted implementation update — 26 September 2026
+
+The `hosted-service-prelaunch` branch now implements a separate Node service, private order ledger, exact USDC checkout and a bounded OpenAI Responses worker. This replaces the two-supplier Serper/model implementation plan below for the initial hosted candidate. See [hosted/README.md](../hosted/README.md) for actual behavior, cost limits and remaining activation gates. It is not a live paid offer; no customer payment or live supplier delivery has been verified. The existing free 0.1.0 release remains unchanged.
+
+---
+
 # Build and launch decision — 26 September 2026
 
 Develop the free local client first; make an actual installation and useful evidence block the acquisition asset. A website or registry listing alone does not supply active customers. The public source repository is https://github.com/rfzj4ygm68-cyber/researchblocks. No package registry listing, promotional campaign or paid execution has been created by this release.
