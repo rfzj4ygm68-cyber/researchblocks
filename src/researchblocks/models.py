@@ -250,8 +250,8 @@ def validate_block(block: dict, request: dict | None = None, now=None) -> dict:
                        "scope": {key: _nullable_text(scope[key], "scope." + key, 200) for key in ("plan", "version", "region")},
                        "evidence_status": state, "sources": sources, "reason": reason}
     provenance = _object(block["provenance"], {"provider", "run_id", "generated_at", "is_demo", "actual_cost_usd", "estimated_cost_usd"}, "provenance")
-    if type(provenance["provider"]) is not str or provenance["provider"] not in {"import", "parallel", "demo"}:
-        raise _error("provenance.provider", "must be import, parallel or demo")
+    if type(provenance["provider"]) is not str or provenance["provider"] not in {"import", "parallel", "openai", "demo"}:
+        raise _error("provenance.provider", "must be import, parallel, openai or demo")
     if type(provenance["is_demo"]) is not bool or (provenance["provider"] == "demo" and not provenance["is_demo"]):
         raise _error("provenance.is_demo", "must be boolean and true for demo provenance")
     generated = _date(provenance["generated_at"], "provenance.generated_at")

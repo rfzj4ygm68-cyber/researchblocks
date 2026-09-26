@@ -36,6 +36,10 @@ class ProviderError(Exception):
         self.ambiguous = bool(ambiguous)
 
 
+class ProviderOutputError(ProviderError):
+    """Completed provider output failed validation; repeating GET cannot repair it."""
+
+
 class _NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
@@ -201,13 +205,15 @@ class ParallelProvider:
         request = validate_request(request)
         response = self._call("GET", "/v1/tasks/runs/" + run_id + "/result?timeout=1")
         run, output = response.get("run"), response.get("output")
-        if not isinstance(run, dict) or run.get("run_id") != run_id or run.get("status") != "completed":
+        if not isinstance(run, dict) or run.get("run_id") != run_id:
+            raise ProviderOutputError("Provider result does not match the requested run")
+        if run.get("status") != "completed":
             raise ProviderError("Provider result is not a completed matching run")
         if not isinstance(output, dict) or output.get("type") != "json" or not isinstance(output.get("content"), dict):
-            raise ProviderError("Provider did not return structured research")
+            raise ProviderOutputError("Provider did not return structured research")
         raw_cells, basis = output["content"].get("cells"), output.get("basis")
         if not isinstance(raw_cells, list) or len(raw_cells) > 15 or not isinstance(basis, list):
-            raise ProviderError("Provider returned an invalid research matrix")
+            raise ProviderOutputError("Provider returned an invalid research matrix")
         basis_by_field = {}
         for entry in basis:
             if isinstance(entry, dict) and isinstance(entry.get("field"), str):
@@ -215,14 +221,14 @@ class ParallelProvider:
         cells = []
         for index, raw in enumerate(raw_cells):
             if not isinstance(raw, dict):
-                raise ProviderError("Provider returned an invalid research cell")
+                raise ProviderOutputError("Provider returned an invalid research cell")
             required = ("candidate", "criterion", "value", "unit", "currency", "billing_basis", "scope", "evidence_status", "reason")
             if any(k not in raw for k in required):
-                raise ProviderError("Provider research cell is incomplete")
+                raise ProviderOutputError("Provider research cell is incomplete")
             cell = {k: raw[k] for k in required}
             observations = raw.get("source_observations", [])
             if not isinstance(observations, list):
-                raise ProviderError("Provider source observations are invalid")
+                raise ProviderOutputError("Provider source observations are invalid")
             observed = {}
             for item in observations:
                 if isinstance(item, dict) and isinstance(item.get("url"), str):
@@ -245,10 +251,10 @@ class ParallelProvider:
                     sources.append({"url": url, "excerpt": excerpt[:600], "retrieved_at": observed.get(url)})
             cell["sources"] = sources
             if not isinstance(cell["reason"], str):
-                raise ProviderError("Provider research reason is invalid")
+                raise ProviderOutputError("Provider research reason is invalid")
             claimed = cell["evidence_status"]
             if not isinstance(claimed, str) or claimed not in {"supported", "conflicting", "not_found", "stale", "unverified"}:
-                raise ProviderError("Provider evidence status is invalid")
+                raise ProviderOutputError("Provider evidence status is invalid")
             if claimed != "not_found":
                 cell["evidence_status"] = "unverified"
                 note = ("Source retrieval times unavailable; no independent source fetch performed."
@@ -263,4 +269,4 @@ class ParallelProvider:
         try:
             return validate_block(block, request=request)
         except ValueError:
-            raise ProviderError("Provider output did not meet evidence-block requirements") from None
+            raise ProviderOutputError("Provider output did not meet evidence-block requirements") from None

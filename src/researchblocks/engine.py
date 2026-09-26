@@ -15,7 +15,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from .models import validate_request, validate_block, refresh_block, render_markdown
-from .providers import ParallelProvider, ProviderError
+from .providers import ParallelProvider, ProviderError, ProviderOutputError
 
 
 class EngineError(ValueError):
@@ -111,14 +111,18 @@ class Engine:
             raise EngineError("Job not found in this local store.")
         return row
 
-    def _update(self, job_id, **fields):
+    def _update(self, job_id, *, only_if=None, **fields):
         allowed = {"status", "remote_id", "block", "error", "ready_at"}
-        if not set(fields) <= allowed:
+        only_if = {} if only_if is None else only_if
+        if not set(fields) <= allowed or not set(only_if) <= allowed:
             raise RuntimeError("Invalid internal update")
         fields["updated"] = utcnow()
+        # Compare and update in one statement: a delayed provider response must
+        # not overwrite progress committed by another process using this store.
+        predicate = "".join(" AND " + key + " IS ?" for key in only_if)
         with self._db() as db:
-            db.execute("UPDATE jobs SET " + ",".join(key + "=?" for key in fields) + " WHERE id=?",
-                       (*fields.values(), job_id))
+            db.execute("UPDATE jobs SET " + ",".join(key + "=?" for key in fields) + " WHERE id=?" + predicate,
+                       (*fields.values(), job_id, *only_if.values()))
 
     def _summary(self, row):
         is_demo = row["provider"] == "demo" or (row["block"] is not None and json.loads(row["block"])["provenance"]["is_demo"])
@@ -177,19 +181,23 @@ class Engine:
     def status(self, job_id):
         row = self._row(job_id)
         if row["status"] == "submitting" and (datetime.now(timezone.utc) - datetime.fromisoformat(row["created"].replace("Z", "+00:00"))).total_seconds() > 60:
-            self._update(job_id, status="submission_unknown", error="Interrupted submission; reconcile the provider account before any new submission.")
+            self._update(job_id, only_if={"status": "submitting"}, status="submission_unknown", error="Interrupted submission; reconcile the provider account before any new submission.")
         elif row["provider"] == "demo" and row["status"] == "running" and time.time() >= row["ready_at"]:
             block = validate_block(self._demo_block(json.loads(row["request"]), job_id))
-            self._update(job_id, status="completed", block=canonical(block))
+            self._update(job_id, only_if={"status": "running"}, status="completed", block=canonical(block))
         elif row["provider"] == "parallel" and row["status"] in ("pending", "running"):
             try:
                 state = self._parallel().status(row["remote_id"])
                 if state not in ("pending", "running", "completed", "failed"):
                     raise ProviderError("Unknown provider state.", ambiguous=False)
-                self._update(job_id, status=state, error="Provider reported a failed run." if state == "failed" else None)
+                if row["status"] == "running" and state == "pending":
+                    state = "running"
+                self._update(job_id, only_if={"status": row["status"]}, status=state,
+                             error="Provider reported a failed run." if state == "failed" else None)
             except ProviderError:
                 # Transient poll failures do not destroy a recoverable remote job.
-                self._update(job_id, error="Status temporarily unavailable; retry status, not submit.")
+                self._update(job_id, only_if={"status": row["status"]},
+                             error="Status temporarily unavailable; retry status, not submit.")
         return self._summary(self._row(job_id))
 
     def result(self, job_id):
@@ -206,13 +214,16 @@ class Engine:
                                        "actual_cost_usd": None,
                                        "estimated_cost_usd": self.quote(request)["estimated_cost_usd"]}
                 block = validate_block(block, request=request)
+            except (ProviderOutputError, ValueError, TypeError, KeyError) as exc:
+                self._update(job_id, only_if={"status": "completed", "block": None}, status="result_invalid",
+                             error="Provider output failed evidence validation; no verified result available.")
+                raise EngineError("Provider output failed evidence validation; no verified result available.") from exc
             except ProviderError as exc:
                 raise EngineError("Result temporarily unavailable; retrieve again without resubmitting.") from exc
-            except (ValueError, TypeError, KeyError) as exc:
-                self._update(job_id, error="Provider output failed evidence validation; no verified result available.")
-                raise EngineError("Provider output failed evidence validation; no verified result available.") from exc
-            self._update(job_id, block=canonical(block), error=None)
+            self._update(job_id, only_if={"status": "completed", "block": None}, block=canonical(block), error=None)
             row = self._row(job_id)
+        if row["block"] is None:
+            return {**self._summary(row), "block": None}
         return {**self._summary(row), "block": refresh_block(json.loads(row["block"])),
                 "verification": "Structure and evidence metadata checked; factual support not independently certified."}
 
