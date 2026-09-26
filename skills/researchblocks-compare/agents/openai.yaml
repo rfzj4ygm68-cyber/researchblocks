@@ -1,0 +1,14 @@
+interface:
+  display_name: ResearchBlocks Compare
+  short_description: Reusable, source-backed API comparison blocks
+  default_prompt: Use $researchblocks-compare to compare these APIs with dated evidence
+    and explicit unknowns.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true
