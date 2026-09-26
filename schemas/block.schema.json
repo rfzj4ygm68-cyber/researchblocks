@@ -1,0 +1,462 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://researchblocks.invalid/schemas/block.schema.json",
+  "title": "ResearchBlocks evidence block",
+  "$comment": "Structure validation is not factual or source authentication. Runtime additionally enforces exact candidate×criterion coverage, submitted request binding, distinct URL limits, allowed domains, five-minute future skew and freshness downgrades. Namespace identifier is not a live URL or owned domain.",
+  "description": "At most three candidates, five criteria and ten distinct cited URLs. A complete matrix is always returned. Source retrieval times may be unknown; completion timestamps must not replace them.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "request",
+    "cells",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "request": {
+      "title": "ResearchBlocks bounded request",
+      "$comment": "Namespace identifier only, not a live URL or owned domain. Runtime validation is authoritative: it checks unique IDs, control characters and public domain rules.",
+      "type": "object",
+      "required": [
+        "candidates",
+        "criteria",
+        "max_age_hours",
+        "max_cost_usd"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "candidates": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "label",
+              "official_domains"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+                "maxLength": 64
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "pattern": "\\S"
+              },
+              "official_domains": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 10,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 253,
+                  "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$",
+                  "description": "Plain public DNS hostname only. Runtime additionally rejects IP/local/reserved hosts and duplicates after case normalization."
+                }
+              }
+            }
+          }
+        },
+        "criteria": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "question"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+                "maxLength": 64
+              },
+              "question": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500,
+                "pattern": "\\S"
+              }
+            }
+          }
+        },
+        "max_age_hours": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 8760
+        },
+        "max_cost_usd": {
+          "type": "string",
+          "pattern": "^(?:(?:0|[1-9][0-9]{0,2})(?:\\.[0-9]{1,8})?|1000(?:\\.0{1,8})?)$"
+        }
+      }
+    },
+    "cells": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 15,
+      "items": {
+        "type": "object",
+        "required": [
+          "candidate",
+          "criterion",
+          "value",
+          "unit",
+          "currency",
+          "billing_basis",
+          "scope",
+          "evidence_status",
+          "sources",
+          "reason"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "candidate": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+            "maxLength": 64
+          },
+          "criterion": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+            "maxLength": 64
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000,
+                "pattern": "\\S"
+              },
+              {
+                "type": "number",
+                "minimum": -1000000000000000.0,
+                "maximum": 1000000000000000.0
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "pattern": "\\S"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Z]{3,10}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "billing_basis": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200,
+                "pattern": "\\S"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scope": {
+            "type": "object",
+            "required": [
+              "plan",
+              "version",
+              "region"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "plan": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "pattern": "\\S"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "version": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "pattern": "\\S"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "region": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "pattern": "\\S"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "evidence_status": {
+            "enum": [
+              "supported",
+              "conflicting",
+              "not_found",
+              "stale",
+              "unverified"
+            ]
+          },
+          "sources": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "type": "object",
+              "required": [
+                "url",
+                "excerpt",
+                "retrieved_at"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2048,
+                  "format": "uri",
+                  "pattern": "^https://",
+                  "description": "Runtime requires candidate official domain or its subdomain, no userinfo, IP/local host, whitespace, backslash, or non-443 port."
+                },
+                "excerpt": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 600,
+                  "pattern": "\\S"
+                },
+                "retrieved_at": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|\\+00:00)$",
+                      "maxLength": 40
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "UTC source-retrieval timestamp, or null when unknown. Unknown time causes supported/conflicting/stale evidence to become unverified; job completion time is not source retrieval time."
+                }
+              }
+            }
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "pattern": "\\S"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "evidence_status": {
+                  "const": "supported"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "value": {
+                  "not": {
+                    "type": "null"
+                  }
+                },
+                "sources": {
+                  "minItems": 1
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "evidence_status": {
+                  "const": "conflicting"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "sources": {
+                  "minItems": 2
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "evidence_status": {
+                  "const": "stale"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "sources": {
+                  "minItems": 1
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "evidence_status": {
+                  "const": "not_found"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "value": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "provider",
+        "run_id",
+        "generated_at",
+        "is_demo",
+        "actual_cost_usd",
+        "estimated_cost_usd"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "enum": [
+            "import",
+            "parallel",
+            "demo"
+          ]
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|\\+00:00)$",
+          "maxLength": 40
+        },
+        "is_demo": {
+          "type": "boolean"
+        },
+        "actual_cost_usd": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?:(?:0|[1-9][0-9]{0,2})(?:\\.[0-9]{1,8})?|1000(?:\\.0{1,8})?)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "estimated_cost_usd": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?:(?:0|[1-9][0-9]{0,2})(?:\\.[0-9]{1,8})?|1000(?:\\.0{1,8})?)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "demo"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "is_demo": {
+                "const": true
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
